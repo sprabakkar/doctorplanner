@@ -1,0 +1,54 @@
+package org.acme.planning.hospitals;
+    dialect "java"
+
+//import org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScoreHolder;
+import org.optaplanner.core.api.score.buildin.hardmediumsoft.HardMediumSoftScoreHolder;
+
+import org.acme.hospitals.solver.HospitalShiftAssignment;
+import org.acme.hospitals.solver.model.Doctor;
+
+//global HardSoftScoreHolder scoreHolder;
+global HardMediumSoftScoreHolder scoreHolder;
+
+// ############################################################################
+// Hard constraints
+// ############################################################################
+rule "Conflict: 1 doctor do not assign to multiple hospitals on the same day"
+when
+   HospitalShiftAssignment($c : doctor, doctor != null, $d : hospital.dayOfWeek.dayId, $leftId : id)
+   HospitalShiftAssignment(doctor == $c, hospital.dayOfWeek.dayId == $d, id > $leftId)
+then
+   scoreHolder.addHardConstraintMatch(kcontext, -1);
+end
+
+// a doctor can only work one shift per day, i.e. no two shift can be assigned to the same doctor on a day.
+//rule "oneShiftPerDay"
+    //when
+        //HospitalShiftAssignment($c: doctor, doctor != null, $shiftDate : shiftDate, $leftId:id)
+        //HospitalShiftAssignment(doctor == $c, shiftDate == $shiftDate, id > $leftId)
+    //then
+        //scoreHolder.addHardConstraintMatch(kcontext, -1);
+//end
+// ############################################################################
+// Medium constraints
+// ############################################################################
+
+rule "overconstrained: leave as little possible unassigned shifts"
+    when
+        HospitalShiftAssignment(doctor == null)
+    then
+        scoreHolder.addMediumConstraintMatch(kcontext, -1);
+end
+
+// ############################################################################
+// Soft constraints
+// ############################################################################
+
+rule "Minimize traveling distance"
+when
+   HospitalShiftAssignment($d : distanceFromDoctorToHospital)
+then
+   scoreHolder.addSoftConstraintMatch(kcontext, -$d);
+   //int a = 1;
+   //System.out.println("Step is now ::: "+a++);
+end
